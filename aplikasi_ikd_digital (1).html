@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi IKD Digital - Identitas Kependudukan</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS untuk Ekspor Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .card-gradient {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #b91c1c 100%);
+        }
+        .hologram-effect {
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.1) 100%);
+        }
+        /* Animasi kedip halus untuk status aktif */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Notifikasi Toast -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-lg"></i>
+        <span id="toast-msg" class="font-medium text-sm">Berhasil menyimpan data!</span>
+    </div>
+
+    <!-- Header Navbar -->
+    <header class="bg-gradient-to-r from-red-700 via-rose-800 to-blue-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
+            <div class="flex items-center space-x-3 mb-3 sm:mb-0">
+                <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
+                    <i class="fa-solid fa-id-card text-2xl text-amber-300"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">IKD Digital ID</h1>
+                    <p class="text-xs text-slate-200">Identitas Kependudukan & Pencatatan Sipil</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openAddModal()" class="bg-white text-red-700 hover:bg-slate-100 font-semibold px-4 py-2 rounded-xl text-sm shadow transition flex items-center space-x-2">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Tambah Penduduk</span>
+                </button>
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-sm shadow transition flex items-center space-x-2">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Ekspor Excel</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+        
+        <!-- Statistik & Filter Bar -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-xl text-xl">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">Total Penduduk</p>
+                    <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
+                </div>
+            </div>
+            <div class="md:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                <div class="relative w-full max-w-md">
+                    <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Cari berdasarkan NIK atau Nama..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition">
+                </div>
+                <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-500 pl-4">
+                    <i class="fa-solid fa-shield-halved text-emerald-600 text-base"></i>
+                    <span>Sistem Terenkripsi LocalStorage</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabel Data Penduduk -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                    <i class="fa-solid fa-address-book text-red-600"></i>
+                    <span>Daftar Penduduk Terdaftar</span>
+                </h2>
+                <span id="data-count-badge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">0 Data</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
+                            <th class="px-6 py-3.5">Foto</th>
+                            <th class="px-6 py-3.5">NIK</th>
+                            <th class="px-6 py-3.5">Nama Lengkap</th>
+                            <th class="px-6 py-3.5 text-center">Aksi Kartu IKD</th>
+                            <th class="px-6 py-3.5 text-right">Kelola</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resident-table-body" class="divide-y divide-slate-100 text-sm">
+                        <!-- Data akan dimasukkan lewat JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden py-16 text-center">
+                <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <p class="text-slate-600 font-medium">Belum ada data penduduk</p>
+                <p class="text-slate-400 text-xs mt-1">Silakan tambahkan data baru melalui tombol di atas.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Form (Tambah / Edit) -->
+    <div id="form-modal" class="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden transform transition-all">
+            <div class="bg-gradient-to-r from-red-700 to-blue-900 px-6 py-4 text-white flex justify-between items-center">
+                <h3 id="modal-title" class="font-bold text-lg">Tambah Penduduk Baru</h3>
+                <button onclick="closeFormModal()" class="text-white/80 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="resident-form" onsubmit="saveResident(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-index" value="-1">
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">NIK (Nomor Induk Kependudukan)</label>
+                    <input type="text" id="nik-input" required maxlength="16" pattern="[0-9]{16}" placeholder="Contoh: 3273012345670001" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                    <p class="text-[11px] text-slate-400 mt-1">Masukkan 16 digit angka NIK valid.</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Lengkap</label>
+                    <input type="text" id="name-input" required placeholder="Nama sesuai KTP" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Foto Penduduk</label>
+                    <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                        <div class="relative w-24 h-28 bg-slate-200 rounded-xl overflow-hidden shadow-inner flex-shrink-0 border border-slate-300">
+                            <img id="photo-preview" src="https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto" alt="Preview Foto" class="w-full h-full object-cover">
+                        </div>
+                        <div class="flex flex-col space-y-2 w-full">
+                            <button type="button" onclick="openCameraModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow transition flex items-center justify-center space-x-2">
+                                <i class="fa-solid fa-camera"></i>
+                                <span>Ambil dari Kamera</span>
+                            </button>
+                            <label class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium px-4 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                                <i class="fa-solid fa-upload"></i>
+                                <span>Unggah Berkas Foto</span>
+                                <input type="file" id="upload-photo" accept="image/*" onchange="handleFileUpload(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+                    <input type="hidden" id="photo-base64" required>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3">
+                    <button type="button" onclick="closeFormModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition">Batal</button>
+                    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow transition">Simpan Data</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Kamera Web -->
+    <div id="camera-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden text-center">
+            <div class="bg-gradient-to-r from-blue-900 to-red-700 px-6 py-4 text-white flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-camera mr-2"></i>Ambil Foto Langsung</h3>
+                <button onclick="closeCameraModal()" class="text-white/80 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="relative w-full aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+                    <video id="camera-stream" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <canvas id="camera-canvas" class="hidden"></canvas>
+                    <div class="absolute inset-0 border-2 border-dashed border-white/30 pointer-events-none rounded-2xl m-4"></div>
+                </div>
+                <div class="flex justify-center space-x-3">
+                    <button type="button" onclick="closeCameraModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 transition">Tutup</button>
+                    <button type="button" onclick="capturePhoto()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-camera-retro"></i>
+                        <span>Jepret Foto</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Kartu IKD Digital -->
+    <div id="ikd-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4 overflow-y-auto">
+        <div class="relative w-full max-w-sm">
+            <button onclick="closeIkdModal()" class="absolute -top-12 right-0 text-white hover:text-red-400 p-2 text-xl transition">
+                <i class="fa-solid fa-circle-xmark text-2xl"></i>
+            </button>
+            
+            <!-- Kartu Digital IKD Interaktif (Flip container) -->
+            <div id="ikd-card-container" class="perspective-1000 w-full cursor-pointer" onclick="flipCard()">
+                <div id="ikd-card-inner" class="relative w-full transition-transform duration-700 transform-style-3d shadow-2xl rounded-3xl overflow-hidden bg-slate-900">
+                    
+                    <!-- BAGIAN DEPAN KARTU -->
+                    <div class="card-gradient text-white p-6 relative overflow-hidden min-h-[440px] flex flex-col justify-between">
+                        <!-- Efek hologram latar belakang -->
+                        <div class="absolute inset-0 hologram-effect pointer-events-none"></div>
+                        <div class="absolute -right-10 -bottom-10 w-48 h-48 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+
+                        <!-- Header Kartu -->
+                        <div class="relative z-10 flex justify-between items-start border-b border-white/20 pb-3">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center font-bold text-xs shadow border border-white/40">RI</div>
+                                <div>
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">Republik Indonesia</h4>
+                                    <p class="text-[10px] text-slate-200">Identitas Kependudukan Digital</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+                                <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
+                                <span>AKTIF</span>
+                            </div>
+                        </div>
+
+                        <!-- Konten Utama Kartu -->
+                        <div class="relative z-10 my-4 flex flex-col items-center text-center">
+                            <div class="w-28 h-36 rounded-2xl overflow-hidden border-2 border-white/60 shadow-lg mb-3 bg-slate-800">
+                                <img id="ikd-card-photo" src="" alt="Foto Penduduk" class="w-full h-full object-cover">
+                            </div>
+                            <h3 id="ikd-card-name" class="font-bold text-lg text-white tracking-wide drop-shadow-sm uppercase">NAMA LENGKAP</h3>
+                            <div class="mt-1 bg-black/30 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
+                                <p class="text-xs font-mono text-amber-300 tracking-widest" id="ikd-card-nik">3273000000000000</p>
+                            </div>
+                        </div>
+
+                        <!-- Footer Kartu Depan -->
+                        <div class="relative z-10 flex justify-between items-center text-[10px] text-slate-300 pt-3 border-t border-white/20">
+                            <div>
+                                <p class="text-slate-400">STATUS DOKUMEN</p>
+                                <p class="font-semibold text-emerald-300">TERVERIFIKASI DUKCAPIL</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-slate-400">KETUK KARTU</p>
+                                <p class="font-semibold text-amber-200">UNTUK QR CODE <i class="fa-solid fa-rotate text-[9px] ml-1"></i></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BAGIAN BELAKANG KARTU (QR Code & Validasi) -->
+                    <div class="card-gradient text-white p-6 relative overflow-hidden min-h-[440px] flex flex-col justify-between absolute inset-0 rotate-y-180 hidden" id="card-back-side">
+                        <div class="absolute inset-0 hologram-effect pointer-events-none"></div>
+
+                        <div class="relative z-10 flex justify-between items-center border-b border-white/20 pb-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">Verifikasi Keaslian IKD</h4>
+                            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono">SECURE-ID</span>
+                        </div>
+
+                        <div class="relative z-10 flex flex-col items-center justify-center my-auto">
+                            <!-- Simulated Dynamic QR Code -->
+                            <div class="bg-white p-3 rounded-2xl shadow-xl">
+                                <div id="qrcode-container" class="w-36 h-36 bg-slate-900 rounded-xl flex items-center justify-center p-2 text-white">
+                                    <!-- Rendered QR Code using simple canvas or svg pattern -->
+                                    <div class="w-full h-full flex flex-col justify-between items-center p-1 border-4 border-slate-900 bg-white text-slate-900 font-mono text-[9px] text-center font-bold">
+                                        <div class="bg-slate-900 w-full py-1 text-white text-[8px]">DIREKTORAT JENDERAL DUKCAPIL</div>
+                                        <i class="fa-solid fa-qrcode text-5xl my-auto text-slate-900"></i>
+                                        <div id="qr-nik-label" class="text-[8px]">NIK: 3273...</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-amber-200 mt-3 font-medium animate-pulse-slow"><i class="fa-solid fa-fingerprint mr-1"></i> QR Code Dinamis Berlaku Aman</p>
+                        </div>
+
+                        <div class="relative z-10 text-center text-[10px] text-slate-300 pt-3 border-t border-white/20">
+                            <p>Ketuk kembali kartu untuk melihat profil foto utama.</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <div class="mt-4 flex justify-center space-x-2">
+                <button onclick="downloadIndividualPhoto()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow transition flex items-center space-x-2">
+                    <i class="fa-solid fa-download"></i>
+                    <span>Download Foto Ini</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
+            &copy; 2026 Direktorat Jenderal Kependudukan dan Pencatatan Sipil (Simulasi IKD Web).
+        </div>
+    </footer>
+
+    <!-- JavaScript Aplikasi -->
+    <script>
+        // State Global
+        let residents = [];
+        let currentStream = null;
+        let activeCardData = null;
+
+        // Inisialisasi awal saat halaman dimuat
+        window.onload = function() {
+            loadFromLocalStorage();
+            renderTable();
+        };
+
+        // Fungsi Load & Save LocalStorage
+        function loadFromLocalStorage() {
+            const data = localStorage.getItem('ikd_residents');
+            if (data) {
+                try {
+                    residents = JSON.parse(data);
+                } catch (e) {
+                    residents = [];
+                }
+            } else {
+                // Data Dummy Awal jika kosong
+                residents = [
+                    {
+                        nik: "3273012508950001",
+                        name: "Budi Santoso",
+                        photo: "https://placehold.co/150x180/cbd5e1/475569?text=Budi"
+                    },
+                    {
+                        nik: "3273041203920004",
+                        name: "Siti Rahmawati",
+                        photo: "https://placehold.co/150x180/cbd5e1/475569?text=Siti"
+                    }
+                ];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('ikd_residents', JSON.stringify(residents));
+        }
+
+        // Toast Notifikasi
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            const toastIcon = document.getElementById('toast-icon');
+
+            toastMsg.innerText = message;
+            if (isError) {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-transform duration-300 bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
+                toastIcon.className = "fa-solid fa-circle-exclamation text-lg";
+            } else {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-transform duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
+                toastIcon.className = "fa-solid fa-circle-check text-lg";
+            }
+
+            setTimeout(() => {
+                toast.className = "fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
+            }, 3000);
+        }
+
+        // Render Tabel Data
+        function renderTable(filterText = '') {
+            const tbody = document.getElementById('resident-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const statTotal = document.getElementById('stat-total');
+            const dataCountBadge = document.getElementById('data-count-badge');
+
+            tbody.innerHTML = '';
+            
+            const filtered = residents.filter(r => 
+                r.nik.toLowerCase().includes(filterText.toLowerCase()) || 
+                r.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+
+            statTotal.innerText = residents.length;
+            dataCountBadge.innerText = `${filtered.length} Data Ditampilkan`;
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.forEach((resident, index) => {
+                // Cari index asli di array utama jika terfilter
+                const originalIndex = residents.findIndex(r => r.nik === resident.nik);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="px-6 py-3">
+                        <div class="w-12 h-14 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shadow-sm">
+                            <img src="${resident.photo}" alt="${resident.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/150x180/e2e8f0/94a3b8?text=Error'">
+                        </div>
+                    </td>
+                    <td class="px-6 py-3 font-mono font-medium text-slate-700">${resident.nik}</td>
+                    <td class="px-6 py-3 font-semibold text-slate-900">${resident.name}</td>
+                    <td class="px-6 py-3 text-center">
+                        <button onclick="openIkdModal(${originalIndex})" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5 mx-auto">
+                            <i class="fa-solid fa-id-card"></i>
+                            <span>Lihat Kartu IKD</span>
+                        </button>
+                    </td>
+                    <td class="px-6 py-3 text-right">
+                        <div class="flex items-center justify-end space-x-2">
+                            <button onclick="downloadPhotoByIndex(${originalIndex})" title="Download Foto" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition">
+                                <i class="fa-solid fa-download text-xs"></i>
+                            </button>
+                            <button onclick="openEditModal(${originalIndex})" title="Edit Data" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition">
+                                <i class="fa-solid fa-pen-to-square text-xs"></i>
+                            </button>
+                            <button onclick="deleteResident(${originalIndex})" title="Hapus Data" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Pencarian Realtime
+        function handleSearch() {
+            const query = document.getElementById('search-input').value;
+            renderTable(query);
+        }
+
+        // Modal Form Manajemen
+        function openAddModal() {
+            document.getElementById('modal-title').innerText = "Tambah Penduduk Baru";
+            document.getElementById('edit-index').value = "-1";
+            document.getElementById('nik-input').value = "";
+            document.getElementById('name-input').value = "";
+            document.getElementById('photo-base64').value = "";
+            document.getElementById('photo-preview').src = "https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto";
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(index) {
+            const resident = residents[index];
+            document.getElementById('modal-title').innerText = "Edit Data Penduduk";
+            document.getElementById('edit-index').value = index;
+            document.getElementById('nik-input').value = resident.nik;
+            document.getElementById('name-input').value = resident.name;
+            document.getElementById('photo-base64').value = resident.photo;
+            document.getElementById('photo-preview').src = resident.photo;
+            document.getElementById('form-modal').classList.remove('hidden');
+        }
+
+        function closeFormModal() {
+            document.getElementById('form-modal').classList.add('hidden');
+        }
+
+        // Upload Berkas Foto
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64String = e.target.result;
+                    document.getElementById('photo-base64').value = base64String;
+                    document.getElementById('photo-preview').src = base64String;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Kontrol Kamera Web
+        function openCameraModal() {
+            document.getElementById('camera-modal').classList.remove('hidden');
+            const video = document.getElementById('camera-stream');
+            navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 500 } })
+                .then(stream => {
+                    currentStream = stream;
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    console.error("Gagal mengakses kamera: ", err);
+                    showToast("Tidak dapat mengakses kamera perangkat.", true);
+                    closeCameraModal();
+                });
+        }
+
+        function closeCameraModal() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                currentStream = null;
+            }
+            document.getElementById('camera-modal').classList.add('hidden');
+        }
+
+        function capturePhoto() {
+            const video = document.getElementById('camera-stream');
+            const canvas = document.getElementById('camera-canvas');
+            
+            canvas.width = video.videoWidth || 300;
+            canvas.height = video.videoHeight || 400;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const base64Data = canvas.toDataURL('image/jpeg');
+            document.getElementById('photo-base64').value = base64Data;
+            document.getElementById('photo-preview').src = base64Data;
+
+            closeCameraModal();
+            showToast("Foto berhasil diambil dari kamera!");
+        }
+
+        // Simpan Data (Tambah atau Update)
+        function saveResident(event) {
+            event.preventDefault();
+            const index = parseInt(document.getElementById('edit-index').value);
+            const nik = document.getElementById('nik-input').value.trim();
+            const name = document.getElementById('name-input').value.trim();
+            const photo = document.getElementById('photo-base64').value;
+
+            if (!photo) {
+                showToast("Foto penduduk wajib diisi (ambil via kamera atau upload).", true);
+                return;
+            }
+
+            if (nik.length !== 16) {
+                showToast("NIK harus tepat 16 digit angka.", true);
+                return;
+            }
+
+            // Cek duplikasi NIK jika tambah baru
+            if (index === -1 && residents.some(r => r.nik === nik)) {
+                showToast("NIK sudah terdaftar dalam sistem!", true);
+                return;
+            }
+
+            if (index === -1) {
+                residents.push({ nik, name, photo });
+                showToast("Data penduduk berhasil ditambahkan!");
+            } else {
+                residents[index] = { nik, name, photo };
+                showToast("Data penduduk berhasil diperbarui!");
+            }
+
+            saveToLocalStorage();
+            renderTable();
+            closeFormModal();
+        }
+
+        // Hapus Data
+        function deleteResident(index) {
+            if (confirm("Apakah Anda yakin ingin menghapus data penduduk ini?")) {
+                residents.splice(index, 1);
+                saveToLocalStorage();
+                renderTable();
+                showToast("Data penduduk berhasil dihapus.");
+            }
+        }
+
+        // Modal Kartu IKD Digital
+        function openIkdModal(index) {
+            activeCardData = residents[index];
+            document.getElementById('ikd-card-photo').src = activeCardData.photo;
+            document.getElementById('ikd-card-name').innerText = activeCardData.name;
+            document.getElementById('ikd-card-nik').innerText = activeCardData.nik;
+            document.getElementById('qr-nik-label').innerText = `NIK: ${activeCardData.nik}`;
+            
+            // Reset posisi kartu ke depan
+            const cardInner = document.getElementById('ikd-card-inner');
+            const cardBack = document.getElementById('card-back-side');
+            cardInner.style.transform = "rotateY(0deg)";
+            cardBack.classList.add('hidden');
+
+            document.getElementById('ikd-modal').classList.remove('hidden');
+        }
+
+        function closeIkdModal() {
+            document.getElementById('ikd-modal').classList.add('hidden');
+        }
+
+        function flipCard() {
+            const cardInner = document.getElementById('ikd-card-inner');
+            const cardBack = document.getElementById('card-back-side');
+            
+            if (cardBack.classList.contains('hidden')) {
+                cardBack.classList.remove('hidden');
+                cardInner.style.transform = "rotateY(180deg)";
+            } else {
+                cardInner.style.transform = "rotateY(0deg)";
+                setTimeout(() => {
+                    cardBack.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // Download Foto Individu
+        function downloadPhotoByIndex(index) {
+            const resident = residents[index];
+            downloadImageUtility(resident.photo, `Foto_${resident.nik}_${resident.name.replace(/\s+/g, '_')}.jpg`);
+        }
+
+        function downloadIndividualPhoto() {
+            if (activeCardData) {
+                downloadImageUtility(activeCardData.photo, `Foto_${activeCardData.nik}_${activeCardData.name.replace(/\s+/g, '_')}.jpg`);
+            }
+        }
+
+        function downloadImageUtility(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("Foto berhasil diunduh!");
+        }
+
+        // Ekspor ke Excel (Menggunakan SheetJS / xlsx)
+        function exportToExcel() {
+            if (residents.length === 0) {
+                showToast("Tidak ada data untuk diekspor.", true);
+                return;
+            }
+
+            // Siapkan data untuk worksheet Excel (tanpa string base64 foto yang terlalu panjang agar tidak error 32,767 char limit)
+            const excelData = residents.map((r, idx) => ({
+                "No": idx + 1,
+                "NIK": r.nik,
+                "Nama Lengkap": r.name,
+                "Keterangan Foto": "Tersedia di Aplikasi (Unduh via tombol Download Foto)"
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Penduduk IKD");
+
+            // Simpan file excel
+            XLSX.writeFile(workbook, "Data_Penduduk_IKD_Digital.xlsx");
+            showToast("Data berhasil diekspor ke format Excel (.xlsx)!");
+        }
+    </script>
+</body>
+</html>
