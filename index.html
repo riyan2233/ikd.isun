@@ -28,6 +28,31 @@
         .animate-pulse-slow {
             animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+        /* Tampilan foto lebih besar; foto asli di Firestore tidak dimodifikasi. */
+        .resident-photo-thumb {
+            width: 110px;
+            height: 130px;
+            display: block;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            background: #e2e8f0;
+            cursor: zoom-in;
+            box-shadow: 0 2px 8px rgba(15, 23, 42, .12);
+            flex-shrink: 0;
+        }
+        .resident-photo-thumb img {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+            object-position: center top;
+            transition: transform .2s ease;
+        }
+        .resident-photo-thumb:hover img,
+        .resident-photo-thumb:focus-visible img { transform: scale(1.04); }
+        .resident-photo-thumb:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+        #photo-zoom-image { max-height: 72vh; max-width: 100%; width: auto; height: auto; object-fit: contain; }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
@@ -194,14 +219,19 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Foto Penduduk</label>
                     <div class="flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                        <div class="relative w-24 h-28 bg-slate-200 rounded-xl overflow-hidden shadow-inner flex-shrink-0 border border-slate-300">
-                            <img id="photo-preview" src="https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto" alt="Preview Foto" class="w-full h-full object-cover">
+                        <div class="relative w-32 h-40 bg-slate-200 rounded-xl overflow-hidden shadow-inner flex-shrink-0 border border-slate-300">
+                            <img id="photo-preview" src="https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto" alt="Preview Foto" class="w-full h-full object-cover object-top">
                         </div>
                         <div class="flex flex-col space-y-2 w-full">
                             <button type="button" onclick="openCameraModal()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow transition flex items-center justify-center space-x-2">
                                 <i class="fa-solid fa-camera"></i>
-                                <span>Ambil dari Kamera</span>
+                                <span>Buka Kamera Belakang</span>
                             </button>
+                            <label class="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-medium px-4 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer">
+                                <i class="fa-solid fa-mobile-screen-button"></i>
+                                <span>Foto Langsung via Kamera HP</span>
+                                <input type="file" id="capture-back-photo" accept="image/*" capture="environment" onchange="handleFileUpload(event)" class="sr-only">
+                            </label>
                             <label class="bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 font-medium px-4 py-2 rounded-xl text-xs shadow-sm transition flex items-center justify-center space-x-2 cursor-pointer">
                                 <i class="fa-solid fa-upload"></i>
                                 <span>Unggah Berkas Foto</span>
@@ -210,7 +240,7 @@
                         </div>
                     </div>
                     <input type="hidden" id="photo-base64" required>
-                    <p class="text-[11px] text-slate-500 mt-2">Foto dioptimalkan otomatis untuk Firestore (JPG, maksimal sekitar 400 KB).</p>
+                    <p class="text-[11px] text-slate-500 mt-2">Kamera belakang diutamakan. Foto baru diproses hingga 960 × 1280 piksel dan dikompresi agar aman disimpan di Firestore. Foto lama tidak berubah otomatis.</p>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3">
@@ -225,17 +255,18 @@
     <div id="camera-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden text-center">
             <div class="bg-gradient-to-r from-blue-900 to-red-700 px-6 py-4 text-white flex justify-between items-center">
-                <h3 class="font-bold text-lg"><i class="fa-solid fa-camera mr-2"></i>Ambil Foto Langsung</h3>
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-camera mr-2"></i>Kamera Belakang</h3>
                 <button onclick="closeCameraModal()" class="text-white/80 hover:text-white p-1 rounded-lg">
                     <i class="fa-solid fa-xmark text-xl"></i>
                 </button>
             </div>
             <div class="p-6 space-y-4">
                 <div class="relative w-full aspect-[3/4] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
-                    <video id="camera-stream" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <video id="camera-stream" autoplay muted playsinline class="w-full h-full object-cover"></video>
                     <canvas id="camera-canvas" class="hidden"></canvas>
                     <div class="absolute inset-0 border-2 border-dashed border-white/30 pointer-events-none rounded-2xl m-4"></div>
                 </div>
+                <p class="text-xs text-slate-600">Arahkan kamera ke wajah. Izinkan akses kamera saat diminta. Jika tidak bisa, gunakan tombol “Foto Langsung via Kamera HP” pada formulir.</p>
                 <div class="flex justify-center space-x-3">
                     <button type="button" onclick="closeCameraModal()" class="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-200 hover:bg-slate-300 text-slate-700 transition">Tutup</button>
                     <button type="button" onclick="capturePhoto()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow transition flex items-center space-x-2">
@@ -340,6 +371,23 @@
                     <i class="fa-solid fa-download"></i>
                     <span>Unduh Foto</span>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Zoom foto penduduk: hanya melihat foto yang sudah ada (tidak mengubah data). -->
+    <div id="photo-zoom-modal" role="dialog" aria-modal="true" aria-label="Foto penduduk ukuran besar" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/85 p-4" onclick="if(event.target===this) closePhotoZoom()">
+        <div class="relative w-full max-w-xl rounded-2xl bg-white p-4 sm:p-6 shadow-2xl">
+            <button type="button" onclick="closePhotoZoom()" aria-label="Tutup foto" class="absolute right-3 top-3 z-10 rounded-full bg-slate-800 px-3 py-2 text-white hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="flex min-h-48 items-center justify-center rounded-xl bg-slate-100 p-2">
+                <img id="photo-zoom-image" src="" alt="Foto penduduk ukuran besar" class="rounded-lg" />
+            </div>
+            <p id="photo-zoom-name" class="mt-3 text-center text-base font-bold text-slate-800"></p>
+            <p class="mt-1 text-center text-xs text-slate-500">Foto ditampilkan dari data yang sudah tersimpan. Kualitas mengikuti resolusi foto asli.</p>
+            <div class="mt-4 flex justify-center">
+                <button type="button" onclick="closePhotoZoom()" class="rounded-xl bg-blue-700 px-5 py-2 text-sm font-semibold text-white hover:bg-blue-800">Tutup</button>
             </div>
         </div>
     </div>
@@ -489,7 +537,7 @@
         const originalIndex=residents.findIndex(x=>x.id===r.id);
         const tr=document.createElement('tr');tr.className='hover:bg-slate-50 transition border-b border-slate-100';
         tr.innerHTML=`
-          <td class="px-6 py-3"><div class="w-12 h-14 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shadow-sm"><img src="${esc(imageSrc(r.photo))}" alt="Foto" class="w-full h-full object-cover"></div></td>
+          <td class="px-6 py-3"><button type="button" data-action="photo" data-index="${originalIndex}" title="Klik untuk memperbesar foto" aria-label="Perbesar foto ${esc(r.name)}" class="resident-photo-thumb"><img src="${esc(imageSrc(r.photo))}" alt="Foto ${esc(r.name)}" loading="lazy" decoding="async"></button></td>
           <td class="px-6 py-3 font-mono font-medium text-slate-700">${esc(r.nik)}</td>
           <td class="px-6 py-3 font-semibold text-slate-900">${esc(r.name)}</td>
           <td class="px-6 py-3 text-center"><button data-action="card" data-index="${originalIndex}" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow">Lihat Kartu Data</button></td>
@@ -504,17 +552,36 @@
     $('resident-table-body').addEventListener('click', e=>{
       const btn=e.target.closest('button[data-action]'); if(!btn) return;
       const i=Number(btn.dataset.index);
+      if(btn.dataset.action==='photo')openPhotoZoom(i);
       if(btn.dataset.action==='card')openIkdModal(i);
       if(btn.dataset.action==='edit')openEditModal(i);
       if(btn.dataset.action==='delete')deleteResident(i);
       if(btn.dataset.action==='download')downloadPhotoByIndex(i);
+    });
+    function openPhotoZoom(index) {
+      if(!ensureAdmin()) return;
+      const r=residents[index]; if(!r) return;
+      const img=$('photo-zoom-image');
+      img.src=imageSrc(r.photo);
+      img.alt='Foto '+r.name;
+      $('photo-zoom-name').textContent=r.name;
+      $('photo-zoom-modal').classList.remove('hidden');
+      $('photo-zoom-modal').classList.add('flex');
+    }
+    window.closePhotoZoom=()=>{
+      $('photo-zoom-modal').classList.add('hidden');
+      $('photo-zoom-modal').classList.remove('flex');
+      $('photo-zoom-image').removeAttribute('src');
+    };
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape' && !$('photo-zoom-modal').classList.contains('hidden')) closePhotoZoom();
     });
     window.handleSearch=()=>renderTable($('search-input').value);
     window.openAddModal=()=>{
       if(!ensureAdmin()) return;
       $('modal-title').textContent='Tambah Penduduk Baru';
       $('edit-index').value='-1'; $('nik-input').value=''; $('name-input').value='';
-      $('photo-base64').value=''; $('upload-photo').value='';
+      $('photo-base64').value=''; $('upload-photo').value=''; $('capture-back-photo').value='';
       $('photo-preview').src='https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto';
       $('form-modal').classList.remove('hidden');
     };
@@ -528,49 +595,118 @@
     }
     window.closeFormModal=()=>$('form-modal').classList.add('hidden');
     async function optimizePhotoFromBlob(blob) {
-      if (!blob.type.startsWith('image/'))throw new Error('Unggah file gambar JPG, PNG, atau WebP.');
-      if(blob.size>15*1024*1024)throw new Error('File foto terlalu besar (maksimal 15 MB sebelum dikompresi).');
-      const url=URL.createObjectURL(blob);
+      if (!blob || !blob.type.startsWith('image/')) throw new Error('Gunakan file foto JPG, PNG, atau WebP.');
+      if (blob.size > 15 * 1024 * 1024) throw new Error('Foto maksimal 15 MB sebelum dikompresi.');
+      const url = URL.createObjectURL(blob);
       try {
-        const img=new Image(); await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('Foto tidak bisa dibaca.'));img.src=url;});
-        const scale=Math.min(1,480/img.naturalWidth,640/img.naturalHeight);
-        const cvs=document.createElement('canvas');cvs.width=Math.round(img.naturalWidth*scale);cvs.height=Math.round(img.naturalHeight*scale);
-        cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
-        const str=cvs.toDataURL('image/jpeg',0.68);
-        if(str.length>550000)throw new Error('Foto masih terlalu besar. Silakan gunakan foto berukuran lebih kecil.');
-        return str;
-      } finally {URL.revokeObjectURL(url);}
+        const img = new Image();
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error('Foto tidak dapat dibaca oleh browser. Coba format JPG.'));
+          img.src = url;
+        });
+        if (!img.naturalWidth || !img.naturalHeight) throw new Error('Ukuran foto tidak valid.');
+        // Firestore menyimpan gambar dalam string base64: pertahankan batas data lama (550000 karakter).
+        // Kualitas baru berupaya hingga 960x1280 tanpa memperbesar sumber yang kecil.
+        const fit = Math.min(1, 960 / img.naturalWidth, 1280 / img.naturalHeight);
+        const cvs = document.createElement('canvas');
+        cvs.width = Math.max(1, Math.round(img.naturalWidth * fit));
+        cvs.height = Math.max(1, Math.round(img.naturalHeight * fit));
+        const ctx = cvs.getContext('2d', { alpha: false });
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, cvs.width, cvs.height);
+        for (let attempt = 0; attempt < 5; attempt++) {
+          for (const quality of [0.86, 0.8, 0.74, 0.68, 0.60, 0.52]) {
+            const encoded = cvs.toDataURL('image/jpeg', quality);
+            if (encoded.length <= 500000) return encoded;
+          }
+          const copy = document.createElement('canvas');
+          copy.width = cvs.width;
+          copy.height = cvs.height;
+          copy.getContext('2d').drawImage(cvs, 0, 0);
+          cvs.width = Math.max(1, Math.round(cvs.width * 0.82));
+          cvs.height = Math.max(1, Math.round(cvs.height * 0.82));
+          const resized = cvs.getContext('2d', { alpha: false });
+          resized.imageSmoothingEnabled = true;
+          resized.imageSmoothingQuality = 'high';
+          resized.drawImage(copy, 0, 0, cvs.width, cvs.height);
+        }
+        throw new Error('Foto terlalu besar untuk Firestore. Silakan coba foto lain.');
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     }
     window.handleFileUpload=async(event)=>{
       const file=event.target.files[0];if(!file)return;
       try{const photo=await optimizePhotoFromBlob(file);$('photo-base64').value=photo;$('photo-preview').src=photo;showToast('Foto siap disimpan ke Firestore.');}
       catch(err){console.error(err);showToast(err.message,true);}
+      finally { event.target.value = ''; }
     };
-    window.openCameraModal=async()=>{
-      if(!ensureAdmin())return;
+    let cameraRequestToken = 0;
+    window.openCameraModal = async () => {
+      if (!ensureAdmin()) return;
+      const token = ++cameraRequestToken;
       $('camera-modal').classList.remove('hidden');
       try {
-        if(!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera memerlukan HTTPS atau localhost.');
-        currentStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:480,height:640}});
-        $('camera-stream').srcObject=currentStream;
-      }catch(err){console.error(err);showToast(err.message || 'Tidak bisa mengakses kamera.',true);closeCameraModal();}
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Akses kamera langsung membutuhkan HTTPS dan izin kamera.');
+        // Kamera belakang HP diutamakan. "ideal" mempertahankan dukungan webcam komputer.
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 960 }
+          }
+        });
+        if (token !== cameraRequestToken) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+        currentStream = stream;
+        const video = $('camera-stream');
+        video.srcObject = currentStream;
+        await video.play();
+      } catch (err) {
+        console.error('Kamera:', err);
+        if (token === cameraRequestToken) {
+          showToast('Kamera tidak tersedia/diizinkan. Coba tombol Foto Langsung via Kamera HP. ' + (err?.message || ''), true);
+          closeCameraModal();
+        }
+      }
     };
     function closeCameraModal() {
-      if(currentStream){currentStream.getTracks().forEach(t=>t.stop());currentStream=null;}
+      cameraRequestToken++;
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+      }
+      $('camera-stream').srcObject = null;
       $('camera-modal').classList.add('hidden');
     }
-    window.closeCameraModal=closeCameraModal;
-    window.capturePhoto=async()=>{
-      const video=$('camera-stream');
-      if(!video.videoWidth){showToast('Kamera belum siap.',true);return;}
-      const cvs=$('camera-canvas');cvs.width=video.videoWidth;cvs.height=video.videoHeight;
-      cvs.getContext('2d').drawImage(video,0,0,cvs.width,cvs.height);
-      try{
-        const blob=await new Promise(resolve=>cvs.toBlob(resolve,'image/jpeg',0.72));
-        const str=await optimizePhotoFromBlob(blob);
-        $('photo-base64').value=str;$('photo-preview').src=str;
-        closeCameraModal();showToast('Foto berhasil diambil.');
-      }catch(e){showToast(e.message,true);}
+    window.closeCameraModal = closeCameraModal;
+    window.capturePhoto = async () => {
+      const video = $('camera-stream');
+      if (!currentStream || !video.videoWidth) {
+        showToast('Kamera belum siap. Tunggu gambar kamera muncul.', true);
+        return;
+      }
+      const cvs = $('camera-canvas');
+      cvs.width = video.videoWidth;
+      cvs.height = video.videoHeight;
+      cvs.getContext('2d').drawImage(video, 0, 0, cvs.width, cvs.height);
+      try {
+        const blob = await new Promise(resolve => cvs.toBlob(resolve, 'image/jpeg', 0.96));
+        if (!blob) throw new Error('Foto gagal diambil, silakan ulangi.');
+        const photo = await optimizePhotoFromBlob(blob);
+        $('photo-base64').value = photo;
+        $('photo-preview').src = photo;
+        closeCameraModal();
+        showToast('Foto dari kamera siap disimpan. Klik Simpan Data untuk memperbarui.');
+      } catch (err) {
+        console.error('Proses foto kamera:', err);
+        showToast(err.message || 'Gagal memproses foto.', true);
+      }
     };
     window.saveResident=async(event)=>{
       event.preventDefault();if(!ensureAdmin())return;
