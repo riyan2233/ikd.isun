@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi IKD Digital - Identitas Kependudukan</title>
+    <title>IKD ONLINE RIYAN | Data Penduduk Internal</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome untuk ikon -->
@@ -38,6 +38,37 @@
         <span id="toast-msg" class="font-medium text-sm">Berhasil menyimpan data!</span>
     </div>
 
+
+    <!-- Login khusus admin; keamanan sesungguhnya ditegakkan oleh Firestore Rules. -->
+    <div id="auth-screen" class="fixed inset-0 z-[100] bg-gradient-to-br from-slate-950 via-blue-950 to-red-950 flex items-center justify-center p-4">
+        <div class="bg-white max-w-md w-full rounded-3xl shadow-2xl p-7 space-y-5">
+            <div class="text-center">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-100 text-blue-800 mb-3"><i class="fa-solid fa-shield-halved text-2xl"></i></div>
+                <h2 class="text-xl font-extrabold text-slate-900">IKD ONLINE RIYAN</h2>
+                <p class="text-sm text-slate-500 mt-1">Login Admin • Data Penduduk Internal</p>
+            </div>
+            <div class="text-xs text-amber-900 bg-amber-50 rounded-xl p-3 border border-amber-200">Aplikasi administrasi internal. Bukan IKD atau dokumen identitas resmi pemerintah.</div>
+            <form id="login-form" class="space-y-3">
+                <label class="block text-xs font-semibold text-slate-600">Email akun Firebase Authentication
+                    <input id="login-email" type="email" autocomplete="username" required placeholder="email admin" class="mt-1 w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                </label>
+                <label class="block text-xs font-semibold text-slate-600">Kata sandi
+                    <input id="login-password" type="password" autocomplete="current-password" required placeholder="Kata sandi" class="mt-1 w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                </label>
+                <button id="login-submit" type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 rounded-xl">Masuk sebagai Admin</button>
+            </form>
+            <div class="flex items-center gap-3"><div class="h-px bg-slate-200 flex-1"></div><span class="text-xs text-slate-400">atau</span><div class="h-px bg-slate-200 flex-1"></div></div>
+            <button id="login-google" type="button" class="w-full border border-slate-300 hover:bg-slate-100 py-3 rounded-xl text-sm font-semibold text-slate-700"><i class="fa-brands fa-google mr-2"></i>Masuk dengan Google</button>
+            <div id="login-status" role="status" aria-live="polite" class="text-sm text-slate-600 text-center">Memeriksa status login...</div>
+            <div id="uid-info" class="hidden text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 break-all">
+                <div class="font-semibold text-slate-700">UID akun yang sedang login:</div>
+                <code id="active-uid" class="text-xs text-blue-800 select-all"></code>
+                <button id="copy-uid" type="button" class="mt-2 text-blue-700 underline">Salin UID</button>
+                <button id="switch-account" type="button" class="mt-2 ml-4 text-red-700 underline">Ganti akun</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Header Navbar -->
     <header class="bg-gradient-to-r from-red-700 via-rose-800 to-blue-900 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
@@ -46,8 +77,8 @@
                     <i class="fa-solid fa-id-card text-2xl text-amber-300"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">IKD Digital ID</h1>
-                    <p class="text-xs text-slate-200">Identitas Kependudukan & Pencatatan Sipil</p>
+                    <h1 class="text-xl font-bold tracking-tight">IKD ONLINE RIYAN</h1>
+                    <p class="text-xs text-slate-200">Pendataan Penduduk • Aplikasi Internal</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -59,12 +90,22 @@
                     <i class="fa-solid fa-file-excel"></i>
                     <span>Ekspor Excel</span>
                 </button>
+                <button onclick="importFromLegacy()" title="Impor data lokal dari versi HTML lama pada domain yang sama" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-3 py-2 rounded-xl text-sm border border-white/30">
+                    <i class="fa-solid fa-file-import mr-1"></i> Impor Lokal
+                </button>
+                <button onclick="logoutAdmin()" class="bg-slate-900/40 hover:bg-slate-900/70 text-white font-semibold px-3 py-2 rounded-xl text-sm border border-white/30">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> Keluar
+                </button>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
     <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+        <div class="mb-4 text-xs text-blue-900 bg-blue-50 p-3 border border-blue-200 rounded-xl flex justify-between gap-2 flex-wrap">
+           <span><i class="fa-solid fa-cloud mr-1"></i> Data tersinkron ke Cloud Firestore jika koneksi internet aktif. Kartu yang ditampilkan bukan dokumen resmi Dukcapil.</span>
+           <span id="sync-status" class="font-bold">Menunggu koneksi...</span>
+        </div>
         
         <!-- Statistik & Filter Bar -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -84,7 +125,7 @@
                 </div>
                 <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-500 pl-4">
                     <i class="fa-solid fa-shield-halved text-emerald-600 text-base"></i>
-                    <span>Sistem Terenkripsi LocalStorage</span>
+                    <span>Akses dibatasi Firebase Authentication</span>
                 </div>
             </div>
         </div>
@@ -169,6 +210,7 @@
                         </div>
                     </div>
                     <input type="hidden" id="photo-base64" required>
+                    <p class="text-[11px] text-slate-500 mt-2">Foto dioptimalkan otomatis untuk Firestore (JPG, maksimal sekitar 400 KB).</p>
                 </div>
 
                 <div class="pt-4 border-t border-slate-100 flex justify-end space-x-3">
@@ -225,15 +267,15 @@
                         <!-- Header Kartu -->
                         <div class="relative z-10 flex justify-between items-start border-b border-white/20 pb-3">
                             <div class="flex items-center space-x-2">
-                                <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center font-bold text-xs shadow border border-white/40">RI</div>
+                                <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center font-bold text-xs shadow border border-white/40">IR</div>
                                 <div>
-                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">Republik Indonesia</h4>
-                                    <p class="text-[10px] text-slate-200">Identitas Kependudukan Digital</p>
+                                    <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">IKD ONLINE RIYAN</h4>
+                                    <p class="text-[10px] text-slate-200">Kartu Data Penduduk Internal</p>
                                 </div>
                             </div>
                             <div class="flex items-center space-x-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full text-[10px] font-semibold">
                                 <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>
-                                <span>AKTIF</span>
+                                <span>DATA INTERNAL</span>
                             </div>
                         </div>
 
@@ -251,12 +293,12 @@
                         <!-- Footer Kartu Depan -->
                         <div class="relative z-10 flex justify-between items-center text-[10px] text-slate-300 pt-3 border-t border-white/20">
                             <div>
-                                <p class="text-slate-400">STATUS DOKUMEN</p>
-                                <p class="font-semibold text-emerald-300">TERVERIFIKASI DUKCAPIL</p>
+                                <p class="text-slate-400">STATUS DATA</p>
+                                <p class="font-semibold text-emerald-300">DATA ADMINISTRASI INTERNAL</p>
                             </div>
                             <div class="text-right">
                                 <p class="text-slate-400">KETUK KARTU</p>
-                                <p class="font-semibold text-amber-200">UNTUK QR CODE <i class="fa-solid fa-rotate text-[9px] ml-1"></i></p>
+                                <p class="font-semibold text-amber-200">UNTUK INFO KARTU <i class="fa-solid fa-rotate text-[9px] ml-1"></i></p>
                             </div>
                         </div>
                     </div>
@@ -266,23 +308,23 @@
                         <div class="absolute inset-0 hologram-effect pointer-events-none"></div>
 
                         <div class="relative z-10 flex justify-between items-center border-b border-white/20 pb-3">
-                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">Verifikasi Keaslian IKD</h4>
-                            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono">SECURE-ID</span>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-amber-200">Informasi Kartu Data Internal</h4>
+                            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-mono">INTERNAL</span>
                         </div>
 
                         <div class="relative z-10 flex flex-col items-center justify-center my-auto">
-                            <!-- Simulated Dynamic QR Code -->
+                            <!-- Ilustrasi visual kartu internal, bukan QR yang dapat diverifikasi -->
                             <div class="bg-white p-3 rounded-2xl shadow-xl">
                                 <div id="qrcode-container" class="w-36 h-36 bg-slate-900 rounded-xl flex items-center justify-center p-2 text-white">
                                     <!-- Rendered QR Code using simple canvas or svg pattern -->
-                                    <div class="w-full h-full flex flex-col justify-between items-center p-1 border-4 border-slate-900 bg-white text-slate-900 font-mono text-[9px] text-center font-bold">
-                                        <div class="bg-slate-900 w-full py-1 text-white text-[8px]">DIREKTORAT JENDERAL DUKCAPIL</div>
-                                        <i class="fa-solid fa-qrcode text-5xl my-auto text-slate-900"></i>
-                                        <div id="qr-nik-label" class="text-[8px]">NIK: 3273...</div>
+                                    <div class="w-full h-full flex flex-col justify-between items-center p-2 bg-white text-slate-900 text-center">
+                                        <div class="bg-slate-900 w-full py-1 text-white text-[8px]">BUKAN DOKUMEN RESMI</div>
+                                        <i class="fa-solid fa-shield-halved text-4xl my-auto text-slate-500"></i>
+                                        <div id="qr-nik-label" class="text-[9px] font-bold">Data internal</div>
                                     </div>
                                 </div>
                             </div>
-                            <p class="text-xs text-amber-200 mt-3 font-medium animate-pulse-slow"><i class="fa-solid fa-fingerprint mr-1"></i> QR Code Dinamis Berlaku Aman</p>
+                            <p class="text-xs text-amber-200 mt-3 font-medium animate-pulse-slow"><i class="fa-solid fa-fingerprint mr-1"></i> Ilustrasi saja, tidak untuk verifikasi</p>
                         </div>
 
                         <div class="relative z-10 text-center text-[10px] text-slate-300 pt-3 border-t border-white/20">
@@ -296,7 +338,7 @@
             <div class="mt-4 flex justify-center space-x-2">
                 <button onclick="downloadIndividualPhoto()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-xs shadow transition flex items-center space-x-2">
                     <i class="fa-solid fa-download"></i>
-                    <span>Download Foto Ini</span>
+                    <span>Unduh Foto</span>
                 </button>
             </div>
         </div>
@@ -305,351 +347,306 @@
     <!-- Footer -->
     <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
         <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500">
-            &copy; 2026 Direktorat Jenderal Kependudukan dan Pencatatan Sipil (Simulasi IKD Web).
+            &copy; 2026 IKD ONLINE RIYAN — Aplikasi pendataan internal, bukan aplikasi atau identitas digital resmi Dukcapil.
         </div>
     </footer>
 
-    <!-- JavaScript Aplikasi -->
-    <script>
-        // State Global
-        let residents = [];
-        let currentStream = null;
-        let activeCardData = null;
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js";
+    import { getFirestore, collection, doc, getDocs, limit, query, onSnapshot, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-        // Inisialisasi awal saat halaman dimuat
-        window.onload = function() {
-            loadFromLocalStorage();
-            renderTable();
-        };
+    // Konfigurasi Firebase untuk proyek IKD ONLINE RIYAN (dari Firebase Project Settings).
+    // Firebase apiKey adalah identitas klien, bukan password admin.
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ2VFcDpE8-b9Ytw4dwVd4TPtbVr9KAis",
+      authDomain: "ikd-online-riyan.firebaseapp.com",
+      projectId: "ikd-online-riyan",
+      storageBucket: "ikd-online-riyan.firebasestorage.app",
+      messagingSenderId: "28843262368",
+      appId: "1:28843262368:web:e442737c2bf85e3b24a4c5",
+      measurementId: "G-5HWFVK78N0"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const residentRef = collection(db, 'residents');
+    let residents = [];
+    let currentStream = null;
+    let activeCardData = null;
+    let unsubscribeResidents = null;
+    let isAuthorized = false;
+    const $ = id => document.getElementById(id);
 
-        // Fungsi Load & Save LocalStorage
-        function loadFromLocalStorage() {
-            const data = localStorage.getItem('ikd_residents');
-            if (data) {
-                try {
-                    residents = JSON.parse(data);
-                } catch (e) {
-                    residents = [];
-                }
-            } else {
-                // Data Dummy Awal jika kosong
-                residents = [
-                    {
-                        nik: "3273012508950001",
-                        name: "Budi Santoso",
-                        photo: "https://placehold.co/150x180/cbd5e1/475569?text=Budi"
-                    },
-                    {
-                        nik: "3273041203920004",
-                        name: "Siti Rahmawati",
-                        photo: "https://placehold.co/150x180/cbd5e1/475569?text=Siti"
-                    }
-                ];
-                saveToLocalStorage();
-            }
-        }
+    function formatError(err) {
+      const code = err?.code || '';
+      const map = {
+        'auth/invalid-credential': 'Email atau kata sandi tidak cocok.',
+        'auth/wrong-password': 'Kata sandi salah.',
+        'auth/user-not-found': 'Akun belum ada di Firebase Authentication.',
+        'auth/operation-not-allowed': 'Metode login belum diaktifkan di Firebase Authentication.',
+        'auth/unauthorized-domain': 'Domain website belum dimasukkan ke Authorized domains Firebase Authentication.',
+        'auth/popup-blocked': 'Popup diblokir browser. Izinkan popup atau gunakan login email.',
+        'auth/popup-closed-by-user': 'Login Google dibatalkan.',
+        'permission-denied': 'Akses Firestore ditolak. Cocokkan UID akun dengan Firestore Rules lalu Publish.',
+        'unavailable': 'Firestore tidak tersedia atau koneksi internet terputus.'
+      };
+      return map[code] || err?.message || 'Terjadi kesalahan. Periksa Console browser.';
+    }
+    function setLoginStatus(msg, isError=false) {
+      $('login-status').textContent = msg;
+      $('login-status').className = 'text-sm text-center ' + (isError ? 'text-red-700 font-semibold' : 'text-slate-600');
+    }
+    function setSyncStatus(message, isError=false) {
+      $('sync-status').textContent = message;
+      $('sync-status').className = 'font-bold ' + (isError ? 'text-red-700' : 'text-emerald-700');
+    }
+    function showToast(message, isError=false) {
+      const toast=$('toast'); $('toast-msg').textContent=message;
+      toast.className='fixed top-5 right-5 z-[120] transform translate-x-0 transition-transform duration-300 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3 ' + (isError ? 'bg-red-600' : 'bg-emerald-600');
+      $('toast-icon').className='fa-solid ' + (isError ? 'fa-circle-exclamation' : 'fa-circle-check') + ' text-lg';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => toast.classList.add('translate-x-full'), 3500);
+    }
 
-        function saveToLocalStorage() {
-            localStorage.setItem('ikd_residents', JSON.stringify(residents));
-        }
-
-        // Toast Notifikasi
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toast-msg');
-            const toastIcon = document.getElementById('toast-icon');
-
-            toastMsg.innerText = message;
-            if (isError) {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-transform duration-300 bg-red-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
-                toastIcon.className = "fa-solid fa-circle-exclamation text-lg";
-            } else {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-0 transition-transform duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
-                toastIcon.className = "fa-solid fa-circle-check text-lg";
-            }
-
-            setTimeout(() => {
-                toast.className = "fixed top-5 right-5 z-50 transform translate-x-full transition-transform duration-300 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center space-x-3";
-            }, 3000);
-        }
-
-        // Render Tabel Data
-        function renderTable(filterText = '') {
-            const tbody = document.getElementById('resident-table-body');
-            const emptyState = document.getElementById('empty-state');
-            const statTotal = document.getElementById('stat-total');
-            const dataCountBadge = document.getElementById('data-count-badge');
-
-            tbody.innerHTML = '';
-            
-            const filtered = residents.filter(r => 
-                r.nik.toLowerCase().includes(filterText.toLowerCase()) || 
-                r.name.toLowerCase().includes(filterText.toLowerCase())
-            );
-
-            statTotal.innerText = residents.length;
-            dataCountBadge.innerText = `${filtered.length} Data Ditampilkan`;
-
-            if (filtered.length === 0) {
-                emptyState.classList.remove('hidden');
-                return;
-            } else {
-                emptyState.classList.add('hidden');
-            }
-
-            filtered.forEach((resident, index) => {
-                // Cari index asli di array utama jika terfilter
-                const originalIndex = residents.findIndex(r => r.nik === resident.nik);
-
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
-                tr.innerHTML = `
-                    <td class="px-6 py-3">
-                        <div class="w-12 h-14 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shadow-sm">
-                            <img src="${resident.photo}" alt="${resident.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/150x180/e2e8f0/94a3b8?text=Error'">
-                        </div>
-                    </td>
-                    <td class="px-6 py-3 font-mono font-medium text-slate-700">${resident.nik}</td>
-                    <td class="px-6 py-3 font-semibold text-slate-900">${resident.name}</td>
-                    <td class="px-6 py-3 text-center">
-                        <button onclick="openIkdModal(${originalIndex})" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow transition flex items-center justify-center space-x-1.5 mx-auto">
-                            <i class="fa-solid fa-id-card"></i>
-                            <span>Lihat Kartu IKD</span>
-                        </button>
-                    </td>
-                    <td class="px-6 py-3 text-right">
-                        <div class="flex items-center justify-end space-x-2">
-                            <button onclick="downloadPhotoByIndex(${originalIndex})" title="Download Foto" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition">
-                                <i class="fa-solid fa-download text-xs"></i>
-                            </button>
-                            <button onclick="openEditModal(${originalIndex})" title="Edit Data" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg transition">
-                                <i class="fa-solid fa-pen-to-square text-xs"></i>
-                            </button>
-                            <button onclick="deleteResident(${originalIndex})" title="Hapus Data" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition">
-                                <i class="fa-solid fa-trash text-xs"></i>
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Pencarian Realtime
-        function handleSearch() {
-            const query = document.getElementById('search-input').value;
-            renderTable(query);
-        }
-
-        // Modal Form Manajemen
-        function openAddModal() {
-            document.getElementById('modal-title').innerText = "Tambah Penduduk Baru";
-            document.getElementById('edit-index').value = "-1";
-            document.getElementById('nik-input').value = "";
-            document.getElementById('name-input').value = "";
-            document.getElementById('photo-base64').value = "";
-            document.getElementById('photo-preview').src = "https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto";
-            document.getElementById('form-modal').classList.remove('hidden');
-        }
-
-        function openEditModal(index) {
-            const resident = residents[index];
-            document.getElementById('modal-title').innerText = "Edit Data Penduduk";
-            document.getElementById('edit-index').value = index;
-            document.getElementById('nik-input').value = resident.nik;
-            document.getElementById('name-input').value = resident.name;
-            document.getElementById('photo-base64').value = resident.photo;
-            document.getElementById('photo-preview').src = resident.photo;
-            document.getElementById('form-modal').classList.remove('hidden');
-        }
-
-        function closeFormModal() {
-            document.getElementById('form-modal').classList.add('hidden');
-        }
-
-        // Upload Berkas Foto
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const base64String = e.target.result;
-                    document.getElementById('photo-base64').value = base64String;
-                    document.getElementById('photo-preview').src = base64String;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // Kontrol Kamera Web
-        function openCameraModal() {
-            document.getElementById('camera-modal').classList.remove('hidden');
-            const video = document.getElementById('camera-stream');
-            navigator.mediaDevices.getUserMedia({ video: { width: 400, height: 500 } })
-                .then(stream => {
-                    currentStream = stream;
-                    video.srcObject = stream;
-                })
-                .catch(err => {
-                    console.error("Gagal mengakses kamera: ", err);
-                    showToast("Tidak dapat mengakses kamera perangkat.", true);
-                    closeCameraModal();
-                });
-        }
-
-        function closeCameraModal() {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-                currentStream = null;
-            }
-            document.getElementById('camera-modal').classList.add('hidden');
-        }
-
-        function capturePhoto() {
-            const video = document.getElementById('camera-stream');
-            const canvas = document.getElementById('camera-canvas');
-            
-            canvas.width = video.videoWidth || 300;
-            canvas.height = video.videoHeight || 400;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const base64Data = canvas.toDataURL('image/jpeg');
-            document.getElementById('photo-base64').value = base64Data;
-            document.getElementById('photo-preview').src = base64Data;
-
-            closeCameraModal();
-            showToast("Foto berhasil diambil dari kamera!");
-        }
-
-        // Simpan Data (Tambah atau Update)
-        function saveResident(event) {
-            event.preventDefault();
-            const index = parseInt(document.getElementById('edit-index').value);
-            const nik = document.getElementById('nik-input').value.trim();
-            const name = document.getElementById('name-input').value.trim();
-            const photo = document.getElementById('photo-base64').value;
-
-            if (!photo) {
-                showToast("Foto penduduk wajib diisi (ambil via kamera atau upload).", true);
-                return;
-            }
-
-            if (nik.length !== 16) {
-                showToast("NIK harus tepat 16 digit angka.", true);
-                return;
-            }
-
-            // Cek duplikasi NIK jika tambah baru
-            if (index === -1 && residents.some(r => r.nik === nik)) {
-                showToast("NIK sudah terdaftar dalam sistem!", true);
-                return;
-            }
-
-            if (index === -1) {
-                residents.push({ nik, name, photo });
-                showToast("Data penduduk berhasil ditambahkan!");
-            } else {
-                residents[index] = { nik, name, photo };
-                showToast("Data penduduk berhasil diperbarui!");
-            }
-
-            saveToLocalStorage();
-            renderTable();
-            closeFormModal();
-        }
-
-        // Hapus Data
-        function deleteResident(index) {
-            if (confirm("Apakah Anda yakin ingin menghapus data penduduk ini?")) {
-                residents.splice(index, 1);
-                saveToLocalStorage();
-                renderTable();
-                showToast("Data penduduk berhasil dihapus.");
-            }
-        }
-
-        // Modal Kartu IKD Digital
-        function openIkdModal(index) {
-            activeCardData = residents[index];
-            document.getElementById('ikd-card-photo').src = activeCardData.photo;
-            document.getElementById('ikd-card-name').innerText = activeCardData.name;
-            document.getElementById('ikd-card-nik').innerText = activeCardData.nik;
-            document.getElementById('qr-nik-label').innerText = `NIK: ${activeCardData.nik}`;
-            
-            // Reset posisi kartu ke depan
-            const cardInner = document.getElementById('ikd-card-inner');
-            const cardBack = document.getElementById('card-back-side');
-            cardInner.style.transform = "rotateY(0deg)";
-            cardBack.classList.add('hidden');
-
-            document.getElementById('ikd-modal').classList.remove('hidden');
-        }
-
-        function closeIkdModal() {
-            document.getElementById('ikd-modal').classList.add('hidden');
-        }
-
-        function flipCard() {
-            const cardInner = document.getElementById('ikd-card-inner');
-            const cardBack = document.getElementById('card-back-side');
-            
-            if (cardBack.classList.contains('hidden')) {
-                cardBack.classList.remove('hidden');
-                cardInner.style.transform = "rotateY(180deg)";
-            } else {
-                cardInner.style.transform = "rotateY(0deg)";
-                setTimeout(() => {
-                    cardBack.classList.add('hidden');
-                }, 300);
-            }
-        }
-
-        // Download Foto Individu
-        function downloadPhotoByIndex(index) {
-            const resident = residents[index];
-            downloadImageUtility(resident.photo, `Foto_${resident.nik}_${resident.name.replace(/\s+/g, '_')}.jpg`);
-        }
-
-        function downloadIndividualPhoto() {
-            if (activeCardData) {
-                downloadImageUtility(activeCardData.photo, `Foto_${activeCardData.nik}_${activeCardData.name.replace(/\s+/g, '_')}.jpg`);
-            }
-        }
-
-        function downloadImageUtility(dataUrl, filename) {
-            const link = document.createElement('a');
-            link.href = dataUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            showToast("Foto berhasil diunduh!");
-        }
-
-        // Ekspor ke Excel (Menggunakan SheetJS / xlsx)
-        function exportToExcel() {
-            if (residents.length === 0) {
-                showToast("Tidak ada data untuk diekspor.", true);
-                return;
-            }
-
-            // Siapkan data untuk worksheet Excel (tanpa string base64 foto yang terlalu panjang agar tidak error 32,767 char limit)
-            const excelData = residents.map((r, idx) => ({
-                "No": idx + 1,
-                "NIK": r.nik,
-                "Nama Lengkap": r.name,
-                "Keterangan Foto": "Tersedia di Aplikasi (Unduh via tombol Download Foto)"
-            }));
-
-            const worksheet = XLSX.utils.json_to_sheet(excelData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Data Penduduk IKD");
-
-            // Simpan file excel
-            XLSX.writeFile(workbook, "Data_Penduduk_IKD_Digital.xlsx");
-            showToast("Data berhasil diekspor ke format Excel (.xlsx)!");
-        }
+    // Firestore Rules, bukan HTML ini, merupakan pembatas keamanan sesungguhnya.
+    onAuthStateChanged(auth, async user => {
+      if (unsubscribeResidents) { unsubscribeResidents(); unsubscribeResidents = null; }
+      isAuthorized=false;
+      residents=[]; renderTable();
+      $('auth-screen').classList.remove('hidden');
+      $('uid-info').classList.toggle('hidden', !user);
+      $('login-form').classList.toggle('hidden', !!user);
+      $('login-google').classList.toggle('hidden', !!user);
+      if (!user) { setLoginStatus('Masukkan email/password admin atau gunakan Google.'); return; }
+      $('active-uid').textContent=user.uid;
+      setLoginStatus('Memeriksa hak akses Firestore...');
+      try {
+        // Query koleksi membuktikan bahwa aturan benar-benar mengizinkan baca.
+        await getDocs(query(residentRef, limit(1)));
+        if (auth.currentUser?.uid !== user.uid) return;
+        isAuthorized=true;
+        $('auth-screen').classList.add('hidden');
+        setSyncStatus('Terhubung • Memuat...');
+        unsubscribeResidents=onSnapshot(residentRef, snapshot=>{
+          residents = snapshot.docs.map(d=> ({id:d.id, ...d.data()}))
+            .sort((a,b)=>String(a.name || '').localeCompare(String(b.name || ''), 'id'));
+          renderTable($('search-input').value);
+          setSyncStatus(snapshot.metadata.fromCache ? 'Dari cache • Belum pasti tersinkron' : 'Sinkron dengan Firestore');
+        },error=>{
+          setSyncStatus('Gagal sinkron: '+formatError(error), true);
+          showToast('Gagal memuat data: '+formatError(error), true);
+          if(error.code === 'permission-denied') {
+            isAuthorized=false;
+            $('auth-screen').classList.remove('hidden');
+            setLoginStatus(formatError(error),true);
+          }
+        });
+      } catch(err) {
+        console.error('Verifikasi akses Firestore:', err);
+        setLoginStatus(formatError(err),true);
+      }
+    });
+    $('login-form').addEventListener('submit', async (event)=>{
+      event.preventDefault();
+      const button=$('login-submit'); button.disabled=true; button.textContent='Menghubungkan...';
+      try { await signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value); }
+      catch(e){ console.error(e); setLoginStatus(formatError(e),true); }
+      finally { button.disabled=false; button.textContent='Masuk sebagai Admin'; $('login-password').value=''; }
+    });
+    $('login-google').addEventListener('click',async()=>{
+      try {setLoginStatus('Membuka login Google...'); await signInWithPopup(auth, new GoogleAuthProvider());}
+      catch(e){ console.error(e); setLoginStatus(formatError(e),true);}
+    });
+    $('copy-uid').addEventListener('click', async()=>{
+      try {await navigator.clipboard.writeText($('active-uid').textContent); setLoginStatus('UID berhasil disalin.');}
+      catch {setLoginStatus('Pilih UID lalu salin secara manual.');}
+    });
+    $('switch-account').addEventListener('click',()=>signOut(auth));
+    window.logoutAdmin = async()=>{
+      if (unsubscribeResidents) {unsubscribeResidents();unsubscribeResidents=null;}
+      isAuthorized=false; residents=[]; renderTable();
+      await signOut(auth);
+    };
+    const ensureAdmin=()=>{
+      if(!isAuthorized || !auth.currentUser){showToast('Silakan login sebagai admin terlebih dahulu.',true);return false;}
+      return true;
+    };
+    const esc=(str)=>String(str ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const imageSrc=(src)=>{
+      const v=String(src || '');
+      return /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(v) || /^https:\/\//i.test(v)
+        ? v : 'https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto';
+    };
+    function renderTable(filterText='') {
+      const tbody=$('resident-table-body'); tbody.replaceChildren();
+      const queryText=String(filterText).toLocaleLowerCase('id');
+      const filtered=residents.filter(r=>String(r.nik).includes(queryText)||String(r.name).toLocaleLowerCase('id').includes(queryText));
+      $('stat-total').textContent=residents.length;
+      $('data-count-badge').textContent=`${filtered.length} Data Ditampilkan`;
+      $('empty-state').classList.toggle('hidden',filtered.length!==0);
+      filtered.forEach(r=>{
+        const originalIndex=residents.findIndex(x=>x.id===r.id);
+        const tr=document.createElement('tr');tr.className='hover:bg-slate-50 transition border-b border-slate-100';
+        tr.innerHTML=`
+          <td class="px-6 py-3"><div class="w-12 h-14 rounded-lg overflow-hidden bg-slate-200 border border-slate-300 shadow-sm"><img src="${esc(imageSrc(r.photo))}" alt="Foto" class="w-full h-full object-cover"></div></td>
+          <td class="px-6 py-3 font-mono font-medium text-slate-700">${esc(r.nik)}</td>
+          <td class="px-6 py-3 font-semibold text-slate-900">${esc(r.name)}</td>
+          <td class="px-6 py-3 text-center"><button data-action="card" data-index="${originalIndex}" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow">Lihat Kartu Data</button></td>
+          <td class="px-6 py-3 text-right"><div class="flex items-center justify-end gap-2">
+            <button data-action="download" data-index="${originalIndex}" title="Unduh Foto" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"><i class="fa-solid fa-download"></i></button>
+            <button data-action="edit" data-index="${originalIndex}" title="Edit Data" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button data-action="delete" data-index="${originalIndex}" title="Hapus Data" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+          </div></td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    $('resident-table-body').addEventListener('click', e=>{
+      const btn=e.target.closest('button[data-action]'); if(!btn) return;
+      const i=Number(btn.dataset.index);
+      if(btn.dataset.action==='card')openIkdModal(i);
+      if(btn.dataset.action==='edit')openEditModal(i);
+      if(btn.dataset.action==='delete')deleteResident(i);
+      if(btn.dataset.action==='download')downloadPhotoByIndex(i);
+    });
+    window.handleSearch=()=>renderTable($('search-input').value);
+    window.openAddModal=()=>{
+      if(!ensureAdmin()) return;
+      $('modal-title').textContent='Tambah Penduduk Baru';
+      $('edit-index').value='-1'; $('nik-input').value=''; $('name-input').value='';
+      $('photo-base64').value=''; $('upload-photo').value='';
+      $('photo-preview').src='https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto';
+      $('form-modal').classList.remove('hidden');
+    };
+    function openEditModal(index) {
+      if(!ensureAdmin()) return;
+      const r=residents[index]; if(!r) return;
+      $('modal-title').textContent='Edit Data Penduduk'; $('edit-index').value=index;
+      $('nik-input').value=r.nik; $('name-input').value=r.name;
+      $('photo-base64').value=r.photo; $('photo-preview').src=imageSrc(r.photo);
+      $('form-modal').classList.remove('hidden');
+    }
+    window.closeFormModal=()=>$('form-modal').classList.add('hidden');
+    async function optimizePhotoFromBlob(blob) {
+      if (!blob.type.startsWith('image/'))throw new Error('Unggah file gambar JPG, PNG, atau WebP.');
+      if(blob.size>15*1024*1024)throw new Error('File foto terlalu besar (maksimal 15 MB sebelum dikompresi).');
+      const url=URL.createObjectURL(blob);
+      try {
+        const img=new Image(); await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('Foto tidak bisa dibaca.'));img.src=url;});
+        const scale=Math.min(1,480/img.naturalWidth,640/img.naturalHeight);
+        const cvs=document.createElement('canvas');cvs.width=Math.round(img.naturalWidth*scale);cvs.height=Math.round(img.naturalHeight*scale);
+        cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
+        const str=cvs.toDataURL('image/jpeg',0.68);
+        if(str.length>550000)throw new Error('Foto masih terlalu besar. Silakan gunakan foto berukuran lebih kecil.');
+        return str;
+      } finally {URL.revokeObjectURL(url);}
+    }
+    window.handleFileUpload=async(event)=>{
+      const file=event.target.files[0];if(!file)return;
+      try{const photo=await optimizePhotoFromBlob(file);$('photo-base64').value=photo;$('photo-preview').src=photo;showToast('Foto siap disimpan ke Firestore.');}
+      catch(err){console.error(err);showToast(err.message,true);}
+    };
+    window.openCameraModal=async()=>{
+      if(!ensureAdmin())return;
+      $('camera-modal').classList.remove('hidden');
+      try {
+        if(!navigator.mediaDevices?.getUserMedia)throw new Error('Kamera memerlukan HTTPS atau localhost.');
+        currentStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:480,height:640}});
+        $('camera-stream').srcObject=currentStream;
+      }catch(err){console.error(err);showToast(err.message || 'Tidak bisa mengakses kamera.',true);closeCameraModal();}
+    };
+    function closeCameraModal() {
+      if(currentStream){currentStream.getTracks().forEach(t=>t.stop());currentStream=null;}
+      $('camera-modal').classList.add('hidden');
+    }
+    window.closeCameraModal=closeCameraModal;
+    window.capturePhoto=async()=>{
+      const video=$('camera-stream');
+      if(!video.videoWidth){showToast('Kamera belum siap.',true);return;}
+      const cvs=$('camera-canvas');cvs.width=video.videoWidth;cvs.height=video.videoHeight;
+      cvs.getContext('2d').drawImage(video,0,0,cvs.width,cvs.height);
+      try{
+        const blob=await new Promise(resolve=>cvs.toBlob(resolve,'image/jpeg',0.72));
+        const str=await optimizePhotoFromBlob(blob);
+        $('photo-base64').value=str;$('photo-preview').src=str;
+        closeCameraModal();showToast('Foto berhasil diambil.');
+      }catch(e){showToast(e.message,true);}
+    };
+    window.saveResident=async(event)=>{
+      event.preventDefault();if(!ensureAdmin())return;
+      const index=Number($('edit-index').value);
+      const nik=$('nik-input').value.trim(), name=$('name-input').value.trim(), photo=$('photo-base64').value;
+      if(!/^\d{16}$/.test(nik)){showToast('NIK wajib 16 digit angka.',true);return;}
+      if(!name || name.length>120){showToast('Nama harus 1 sampai 120 karakter.',true);return;}
+      if(!photo){showToast('Foto wajib diisi.',true);return;}
+      if(photo.length>550000){showToast('Foto terlalu besar untuk penyimpanan Firestore.',true);return;}
+      if(residents.some((r,i)=>r.nik===nik && i!==index)){showToast('NIK sudah terdaftar.',true);return;}
+      const btn=$('resident-form').querySelector('button[type="submit"]');btn.disabled=true;btn.textContent='Menyimpan...';
+      try{
+        if(index===-1){await addDoc(residentRef,{nik,name,photo,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});showToast('Data baru tersimpan di Firestore.');}
+        else {const r=residents[index];if(!r)throw new Error('Data tidak ditemukan, muat ulang halaman.');
+          await updateDoc(doc(db,'residents',r.id),{nik,name,photo,updatedAt:serverTimestamp()});showToast('Data berhasil diperbarui di Firestore.');}
+        closeFormModal();
+      }catch(e){console.error(e);showToast('Gagal menyimpan: '+formatError(e),true);}
+      finally{btn.disabled=false;btn.textContent='Simpan Data';}
+    };
+    async function deleteResident(index) {
+      if(!ensureAdmin())return;
+      const r=residents[index];if(!r || !confirm(`Hapus data ${r.name}? Tindakan tidak dapat dibatalkan.`))return;
+      try{await deleteDoc(doc(db,'residents',r.id));showToast('Data telah dihapus dari Firestore.');}
+      catch(e){console.error(e);showToast('Gagal menghapus: '+formatError(e),true);}
+    }
+    function openIkdModal(index) {
+      if(!ensureAdmin())return;
+      activeCardData=residents[index];if(!activeCardData)return;
+      $('ikd-card-photo').src=imageSrc(activeCardData.photo);
+      $('ikd-card-name').textContent=activeCardData.name;
+      $('ikd-card-nik').textContent=activeCardData.nik;
+      $('qr-nik-label').textContent='Hanya data internal';
+      $('ikd-card-inner').style.transform='rotateY(0deg)';
+      $('card-back-side').classList.add('hidden');
+      $('ikd-modal').classList.remove('hidden');
+    }
+    window.closeIkdModal=()=>$('ikd-modal').classList.add('hidden');
+    window.flipCard=()=>{
+      const inner=$('ikd-card-inner'), back=$('card-back-side');
+      const isBack=!back.classList.contains('hidden');
+      if(isBack){inner.style.transform='rotateY(0deg)';setTimeout(()=>back.classList.add('hidden'),300);}
+      else {back.classList.remove('hidden');inner.style.transform='rotateY(180deg)';}
+    };
+    function downloadImageUtility(dataUrl,filename){
+      const link=document.createElement('a');link.href=imageSrc(dataUrl);link.download=filename;
+      document.body.appendChild(link);link.click();link.remove();showToast('Foto diunduh.');
+    }
+    function downloadPhotoByIndex(index){const r=residents[index];if(r)downloadImageUtility(r.photo,`Foto_${r.nik}.jpg`);}
+    window.downloadIndividualPhoto=()=>{if(activeCardData)downloadImageUtility(activeCardData.photo,`Foto_${activeCardData.nik}.jpg`);};
+    window.exportToExcel=()=>{
+      if(!ensureAdmin())return;
+      if(!residents.length){showToast('Tidak ada data untuk diekspor.',true);return;}
+      if(!window.XLSX){showToast('Pustaka Excel gagal dimuat. Periksa internet.',true);return;}
+      const data=residents.map((r,i)=>({'No':i+1,'NIK':r.nik,'Nama Lengkap':r.name,'Foto':'Tersedia di aplikasi (tidak ikut file Excel)'}));
+      const sheet=XLSX.utils.json_to_sheet(data);
+      // Pastikan kolom NIK disimpan sebagai teks sehingga nol di depan tidak terpotong.
+      Object.entries(sheet).forEach(([cell,val])=>{if(/^B\d+$/.test(cell)&&val?.v!=null){val.t='s';val.v=String(val.v);}});
+      const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,sheet,'Penduduk');
+      XLSX.writeFile(wb,'Data_Penduduk_IKD_ONLINE_RIYAN.xlsx');showToast('Data berhasil diekspor.');
+    };
+    window.importFromLegacy=async()=>{
+      if(!ensureAdmin())return;
+      let entries=[];
+      try{entries=JSON.parse(localStorage.getItem('ikd_residents')||'[]');}
+      catch{showToast('Data lokal lama tidak terbaca.',true);return;}
+      if(!Array.isArray(entries)||!entries.length){showToast('Tidak ada data lokal lama di domain ini.',true);return;}
+      const candidates=entries.filter(r=>r&&/^\d{16}$/.test(String(r.nik||''))&&typeof r.name==='string'&&r.name.trim().length>0&&typeof r.photo==='string'&&r.photo.length<550000&&!residents.some(old=>old.nik===r.nik) && !['3273012508950001','3273041203920004'].includes(String(r.nik)));
+      if(!candidates.length){showToast('Tidak ditemukan data valid baru untuk diimpor.',true);return;}
+      if(!confirm(`Impor ${candidates.length} data penduduk dari LocalStorage browser ini ke Firestore? Pastikan Anda berwenang mengelola data tersebut. Data lokal lama tidak akan dihapus.`))return;
+      let success=0;
+      for(const r of candidates){
+        try{await addDoc(residentRef,{nik:String(r.nik),name:r.name.trim().slice(0,120),photo:r.photo,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});success++;}
+        catch(e){console.error('Impor gagal:',e);showToast(`Terimpor ${success}/${candidates.length}. Data lainnya gagal.`,true);return;}
+      }
+      showToast(`${success} data lokal berhasil diimpor ke Firestore.`);
+    };
     </script>
 </body>
 </html>
