@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IKD ONLINE RIYAN | Data Penduduk Internal</title>
+    <title>IKD ONLINE RIYAN | Data Penduduk 7 Dusun Desa Songgon</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome untuk ikon -->
@@ -53,6 +53,38 @@
         .resident-photo-thumb:focus-visible img { transform: scale(1.04); }
         .resident-photo-thumb:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
         #photo-zoom-image { max-height: 72vh; max-width: 100%; width: auto; height: auto; object-fit: contain; }
+        /* Responsive: nyaman pada HP kecil tanpa mengubah kode penyimpanan dan login. */
+        html, body { max-width: 100%; overflow-x: clip; }
+        * { box-sizing: border-box; }
+        img, video { max-width: 100%; }
+        input, select, textarea { min-width: 0; }
+        #auth-screen { min-height: 100dvh; overflow-y: auto; }
+        #toast { max-width: calc(100vw - 1.5rem); overflow-wrap: anywhere; }
+        #form-modal, #camera-modal, #ikd-modal { max-height: 100dvh; overflow-y: auto; }
+        #form-modal > div, #camera-modal > div { max-height: calc(100dvh - 1rem); overflow-y: auto; }
+        #camera-stream { max-height: 54dvh; }
+        .filter-chip { white-space: nowrap; flex: 0 0 auto; touch-action: manipulation; }
+        #dusun-filter-list { scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+        .resident-mobile-photo { display:block; width:82px; height:105px; border-radius:12px; overflow:hidden; flex:0 0 82px; background:#e2e8f0; border:1px solid #cbd5e1; }
+        .resident-mobile-photo img { width:100%; height:100%; object-fit:cover; object-position:center top; }
+        .mobile-resident-card { min-width:0; }
+        .mobile-resident-card .resident-name { overflow-wrap:anywhere; }
+        .mobile-resident-card .resident-nik { overflow-wrap:anywhere; }
+        @media (max-width: 639px) {
+          .header-actions > button { min-height:44px; display:flex; justify-content:center; align-items:center; padding:10px 6px; font-size:11px; gap:5px; }
+          .resident-photo-thumb { width:80px; height:105px; }
+          #ikd-card-inner .card-gradient { padding: 18px; min-height: 405px; }
+          #photo-zoom-modal { padding: 8px; }
+          #form-modal { padding: 8px; align-items: flex-start; }
+          #form-modal > div { margin: auto 0; width: 100%; }
+          #resident-form { padding: 16px; }
+          #camera-modal { padding: 8px; }
+          #camera-modal > div .p-6 { padding: 14px; }
+        }
+        @media (max-width: 350px) {
+          .resident-mobile-photo { width:70px; height:92px; flex-basis:70px; }
+          .header-actions > button { font-size:10px; }
+        }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
@@ -96,8 +128,8 @@
 
     <!-- Header Navbar -->
     <header class="bg-gradient-to-r from-red-700 via-rose-800 to-blue-900 text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center">
-            <div class="flex items-center space-x-3 mb-3 sm:mb-0">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 py-4 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-3">
+            <div class="flex items-center space-x-3 min-w-0">
                 <div class="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/20">
                     <i class="fa-solid fa-id-card text-2xl text-amber-300"></i>
                 </div>
@@ -106,7 +138,7 @@
                     <p class="text-xs text-slate-200">Pendataan Penduduk • Aplikasi Internal</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-2">
+            <div class="header-actions grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-end gap-2 w-full lg:w-auto">
                 <button onclick="openAddModal()" class="bg-white text-red-700 hover:bg-slate-100 font-semibold px-4 py-2 rounded-xl text-sm shadow transition flex items-center space-x-2">
                     <i class="fa-solid fa-user-plus"></i>
                     <span>Tambah Penduduk</span>
@@ -126,14 +158,14 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto min-w-0 px-3 sm:px-4 py-4 sm:py-6">
         <div class="mb-4 text-xs text-blue-900 bg-blue-50 p-3 border border-blue-200 rounded-xl flex justify-between gap-2 flex-wrap">
            <span><i class="fa-solid fa-cloud mr-1"></i> Data tersinkron ke Cloud Firestore jika koneksi internet aktif. Kartu yang ditampilkan bukan dokumen resmi Dukcapil.</span>
            <span id="sync-status" class="font-bold">Menunggu koneksi...</span>
         </div>
         
         <!-- Statistik & Filter Bar -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 mb-4">
             <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center space-x-4">
                 <div class="bg-blue-50 text-blue-600 p-3 rounded-xl text-xl">
                     <i class="fa-solid fa-users"></i>
@@ -143,10 +175,10 @@
                     <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
                 </div>
             </div>
-            <div class="md:col-span-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+            <div class="md:col-span-3 min-w-0 bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                 <div class="relative w-full max-w-md">
                     <i class="fa-solid fa-search absolute left-3.5 top-3.5 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Cari berdasarkan NIK atau Nama..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition">
+                    <input type="text" id="search-input" oninput="handleSearch()" placeholder="Cari NIK, nama, atau dusun..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white transition">
                 </div>
                 <div class="hidden sm:flex items-center space-x-2 text-xs text-slate-500 pl-4">
                     <i class="fa-solid fa-shield-halved text-emerald-600 text-base"></i>
@@ -155,9 +187,19 @@
             </div>
         </div>
 
+        <!-- Filter dusun: hanya mengelompokkan data; penduduk lama yang belum punya dusun tetap terlihat. -->
+        <section aria-label="Filter berdasarkan dusun" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-3 sm:p-4 mb-4">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div class="font-bold text-slate-800 text-sm sm:text-base"><i class="fa-solid fa-map-location-dot text-red-600 mr-2"></i>Data Penduduk per Dusun</div>
+                <span class="text-xs text-slate-500">Geser pilihan dusun di HP <i class="fa-solid fa-arrow-right ml-1"></i></span>
+            </div>
+            <div id="dusun-filter-list" class="flex min-w-0 overflow-x-auto gap-2 pb-2" role="group" aria-label="Pilih dusun"></div>
+            <p class="mt-1 text-[11px] text-slate-500">Data lama tanpa keterangan dusun berada di pilihan “Belum ditentukan”; tidak diubah otomatis.</p>
+        </section>
+
         <!-- Tabel Data Penduduk -->
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div class="px-4 sm:px-6 py-4 border-b border-slate-100 flex flex-wrap gap-2 justify-between items-center">
                 <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
                     <i class="fa-solid fa-address-book text-red-600"></i>
                     <span>Daftar Penduduk Terdaftar</span>
@@ -165,13 +207,14 @@
                 <span id="data-count-badge" class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">0 Data</span>
             </div>
             
-            <div class="overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold border-b border-slate-200">
                             <th class="px-6 py-3.5">Foto</th>
                             <th class="px-6 py-3.5">NIK</th>
                             <th class="px-6 py-3.5">Nama Lengkap</th>
+                            <th class="px-6 py-3.5">Dusun</th>
                             <th class="px-6 py-3.5 text-center">Aksi Kartu IKD</th>
                             <th class="px-6 py-3.5 text-right">Kelola</th>
                         </tr>
@@ -181,6 +224,9 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Tampilan kartu HP: tidak perlu menggeser tabel ke samping. -->
+            <div id="mobile-resident-list" class="md:hidden divide-y divide-slate-100" aria-label="Daftar penduduk di HP"></div>
 
             <!-- Empty State -->
             <div id="empty-state" class="hidden py-16 text-center">
@@ -214,6 +260,21 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nama Lengkap</label>
                     <input type="text" id="name-input" required placeholder="Nama sesuai KTP" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500 transition">
+                </div>
+
+                <div>
+                    <label for="dusun-input" class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Dusun / Wilayah Penduduk</label>
+                    <select id="dusun-input" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                        <option value="">-- Pilih Dusun --</option>
+                        <option value="DUSUN SUMBERREJO">DUSUN SUMBERREJO</option>
+                        <option value="DUSUN PAKIS">DUSUN PAKIS</option>
+                        <option value="DUSUN KRAJAN">DUSUN KRAJAN</option>
+                        <option value="DUSUN TENGOROREJO">DUSUN TENGOROREJO</option>
+                        <option value="DUSUN SUMBERASRI">DUSUN SUMBERASRI</option>
+                        <option value="DUSUN SONGGOREJO">DUSUN SONGGOREJO</option>
+                        <option value="DUSUN GUMUKCANDI">DUSUN GUMUKCANDI</option>
+                    </select>
+                    <p class="text-[11px] text-slate-500 mt-1">Wajib untuk penduduk baru. Data lama tetap aman dan dapat diberi dusun saat diedit.</p>
                 </div>
 
                 <div>
@@ -317,8 +378,9 @@
                             </div>
                             <h3 id="ikd-card-name" class="font-bold text-lg text-white tracking-wide drop-shadow-sm uppercase">NAMA LENGKAP</h3>
                             <div class="mt-1 bg-black/30 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
-                                <p class="text-xs font-mono text-amber-300 tracking-widest" id="ikd-card-nik">3273000000000000</p>
+                                <p class="text-xs font-mono text-amber-300 tracking-widest" id="ikd-card-nik">0000000000000000</p>
                             </div>
+                            <p id="ikd-card-dusun" class="text-[11px] text-blue-100 font-semibold mt-2">Dusun belum ditentukan</p>
                         </div>
 
                         <!-- Footer Kartu Depan -->
@@ -420,6 +482,14 @@
     const db = getFirestore(app);
     const residentRef = collection(db, 'residents');
     let residents = [];
+    const DUSUN_LIST = Object.freeze([
+      'DUSUN SUMBERREJO', 'DUSUN PAKIS', 'DUSUN KRAJAN',
+      'DUSUN TENGOROREJO', 'DUSUN SUMBERASRI',
+      'DUSUN SONGGOREJO', 'DUSUN GUMUKCANDI'
+    ]);
+    let activeDusunFilter = 'SEMUA';
+    const dusunOf = r => DUSUN_LIST.includes(String(r?.dusun || '').toUpperCase().trim())
+      ? String(r.dusun).toUpperCase().trim() : '';
     let currentStream = null;
     let activeCardData = null;
     let unsubscribeResidents = null;
@@ -526,38 +596,107 @@
       return /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=]+$/i.test(v) || /^https:\/\//i.test(v)
         ? v : 'https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto';
     };
-    function renderTable(filterText='') {
-      const tbody=$('resident-table-body'); tbody.replaceChildren();
-      const queryText=String(filterText).toLocaleLowerCase('id');
-      const filtered=residents.filter(r=>String(r.nik).includes(queryText)||String(r.name).toLocaleLowerCase('id').includes(queryText));
-      $('stat-total').textContent=residents.length;
-      $('data-count-badge').textContent=`${filtered.length} Data Ditampilkan`;
-      $('empty-state').classList.toggle('hidden',filtered.length!==0);
-      filtered.forEach(r=>{
-        const originalIndex=residents.findIndex(x=>x.id===r.id);
-        const tr=document.createElement('tr');tr.className='hover:bg-slate-50 transition border-b border-slate-100';
-        tr.innerHTML=`
-          <td class="px-6 py-3"><button type="button" data-action="photo" data-index="${originalIndex}" title="Klik untuk memperbesar foto" aria-label="Perbesar foto ${esc(r.name)}" class="resident-photo-thumb"><img src="${esc(imageSrc(r.photo))}" alt="Foto ${esc(r.name)}" loading="lazy" decoding="async"></button></td>
-          <td class="px-6 py-3 font-mono font-medium text-slate-700">${esc(r.nik)}</td>
-          <td class="px-6 py-3 font-semibold text-slate-900">${esc(r.name)}</td>
-          <td class="px-6 py-3 text-center"><button data-action="card" data-index="${originalIndex}" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow">Lihat Kartu Data</button></td>
-          <td class="px-6 py-3 text-right"><div class="flex items-center justify-end gap-2">
-            <button data-action="download" data-index="${originalIndex}" title="Unduh Foto" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"><i class="fa-solid fa-download"></i></button>
-            <button data-action="edit" data-index="${originalIndex}" title="Edit Data" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button data-action="delete" data-index="${originalIndex}" title="Hapus Data" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash"></i></button>
-          </div></td>`;
-        tbody.appendChild(tr);
+    function renderDusunFilters() {
+      const el = $('dusun-filter-list');
+      el.replaceChildren();
+      const counts = Object.fromEntries(DUSUN_LIST.map(x => [x, 0]));
+      let unassigned = 0;
+      for (const r of residents) {
+        const dusun = dusunOf(r);
+        if (dusun) counts[dusun]++;
+        else unassigned++;
+      }
+      const options = [
+        ['SEMUA', 'Semua Dusun', residents.length],
+        ...DUSUN_LIST.map(d => [d, d, counts[d]]),
+        ['BELUM', 'Belum ditentukan', unassigned]
+      ];
+      options.forEach(([value, title, amount]) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.dusun = value;
+        btn.setAttribute('aria-pressed', String(activeDusunFilter === value));
+        btn.className = 'filter-chip rounded-xl border px-3.5 py-2.5 text-xs sm:text-sm font-semibold transition ' +
+          (activeDusunFilter === value ? 'bg-blue-700 border-blue-700 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-blue-50');
+        btn.textContent = `${title} (${amount})`;
+        el.appendChild(btn);
       });
     }
-    $('resident-table-body').addEventListener('click', e=>{
-      const btn=e.target.closest('button[data-action]'); if(!btn) return;
-      const i=Number(btn.dataset.index);
-      if(btn.dataset.action==='photo')openPhotoZoom(i);
-      if(btn.dataset.action==='card')openIkdModal(i);
-      if(btn.dataset.action==='edit')openEditModal(i);
-      if(btn.dataset.action==='delete')deleteResident(i);
-      if(btn.dataset.action==='download')downloadPhotoByIndex(i);
+    $('dusun-filter-list').addEventListener('click', e => {
+      const btn = e.target.closest('button[data-dusun]');
+      if (!btn) return;
+      activeDusunFilter = btn.dataset.dusun;
+      renderTable($('search-input').value);
     });
+    function renderTable(filterText='') {
+      const tbody = $('resident-table-body'); tbody.replaceChildren();
+      const mobile = $('mobile-resident-list'); mobile.replaceChildren();
+      const queryText = String(filterText).trim().toLocaleLowerCase('id');
+      const filtered = residents.filter(r => {
+        const dusun = dusunOf(r);
+        const matchesDusun = activeDusunFilter === 'SEMUA' ||
+          (activeDusunFilter === 'BELUM' ? !dusun : dusun === activeDusunFilter);
+        const matchesText = !queryText || String(r.nik || '').includes(queryText) ||
+          String(r.name || '').toLocaleLowerCase('id').includes(queryText) ||
+          (dusun || 'Belum ditentukan').toLocaleLowerCase('id').includes(queryText);
+        return matchesDusun && matchesText;
+      });
+      $('stat-total').textContent = residents.length;
+      $('data-count-badge').textContent = `${filtered.length} Data Ditampilkan`;
+      $('empty-state').classList.toggle('hidden', filtered.length !== 0);
+      renderDusunFilters();
+      filtered.forEach(r => {
+        const i = residents.findIndex(x => x.id === r.id);
+        const dusun = dusunOf(r) || 'Belum ditentukan';
+        const image = esc(imageSrc(r.photo));
+        const name = esc(r.name);
+        const nik = esc(r.nik);
+        const displayDusun = esc(dusun);
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition border-b border-slate-100';
+        tr.innerHTML = `
+          <td class="px-6 py-3"><button type="button" data-action="photo" data-index="${i}" title="Perbesar foto" aria-label="Perbesar foto ${name}" class="resident-photo-thumb"><img src="${image}" alt="Foto ${name}" loading="lazy" decoding="async"></button></td>
+          <td class="px-6 py-3 font-mono font-medium text-slate-700">${nik}</td>
+          <td class="px-6 py-3 font-semibold text-slate-900">${name}</td>
+          <td class="px-6 py-3 text-xs font-semibold text-blue-800">${displayDusun}</td>
+          <td class="px-6 py-3 text-center"><button data-action="card" data-index="${i}" class="bg-gradient-to-r from-blue-700 to-red-600 text-white hover:opacity-95 text-xs font-semibold px-3.5 py-2 rounded-xl shadow">Lihat Kartu Data</button></td>
+          <td class="px-6 py-3 text-right"><div class="flex items-center justify-end gap-2">
+            <button data-action="download" data-index="${i}" aria-label="Unduh foto ${name}" title="Unduh Foto" class="p-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg"><i class="fa-solid fa-download"></i></button>
+            <button data-action="edit" data-index="${i}" aria-label="Edit ${name}" title="Edit Data" class="p-2 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button data-action="delete" data-index="${i}" aria-label="Hapus ${name}" title="Hapus Data" class="p-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg"><i class="fa-solid fa-trash"></i></button>
+          </div></td>`;
+        tbody.appendChild(tr);
+        const card = document.createElement('article');
+        card.className = 'mobile-resident-card p-3.5';
+        card.innerHTML = `
+          <div class="flex items-start gap-3 min-w-0">
+            <button type="button" data-action="photo" data-index="${i}" title="Perbesar foto" aria-label="Perbesar foto ${name}" class="resident-mobile-photo"><img src="${image}" alt="Foto ${name}" loading="lazy" decoding="async"></button>
+            <div class="flex-1 min-w-0">
+              <h3 class="resident-name text-sm font-bold leading-snug text-slate-900">${name}</h3>
+              <p class="resident-nik text-xs font-mono text-slate-600 mt-1">${nik}</p>
+              <p class="inline-flex max-w-full mt-2 text-[11px] font-semibold bg-blue-50 text-blue-800 px-2 py-1 rounded-lg break-words">${displayDusun}</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-2 mt-3">
+            <button data-action="card" data-index="${i}" class="col-span-1 bg-blue-700 text-white rounded-lg text-[11px] font-semibold py-2.5 px-1"><i class="fa-solid fa-id-card block mb-1"></i>Kartu</button>
+            <button data-action="download" data-index="${i}" class="col-span-1 bg-blue-50 text-blue-700 rounded-lg text-[11px] font-semibold py-2.5 px-1"><i class="fa-solid fa-download block mb-1"></i>Unduh</button>
+            <button data-action="edit" data-index="${i}" class="col-span-1 bg-amber-50 text-amber-700 rounded-lg text-[11px] font-semibold py-2.5 px-1"><i class="fa-solid fa-pen-to-square block mb-1"></i>Edit</button>
+            <button data-action="delete" data-index="${i}" class="col-span-1 bg-red-50 text-red-700 rounded-lg text-[11px] font-semibold py-2.5 px-1"><i class="fa-solid fa-trash block mb-1"></i>Hapus</button>
+          </div>`;
+        mobile.appendChild(card);
+      });
+    }
+    function handleResidentAction(e) {
+      const btn = e.target.closest('button[data-action]'); if (!btn) return;
+      const i = Number(btn.dataset.index);
+      if (btn.dataset.action === 'photo') openPhotoZoom(i);
+      if (btn.dataset.action === 'card') openIkdModal(i);
+      if (btn.dataset.action === 'edit') openEditModal(i);
+      if (btn.dataset.action === 'delete') deleteResident(i);
+      if (btn.dataset.action === 'download') downloadPhotoByIndex(i);
+    }
+    $('resident-table-body').addEventListener('click', handleResidentAction);
+    $('mobile-resident-list').addEventListener('click', handleResidentAction);
     function openPhotoZoom(index) {
       if(!ensureAdmin()) return;
       const r=residents[index]; if(!r) return;
@@ -580,7 +719,7 @@
     window.openAddModal=()=>{
       if(!ensureAdmin()) return;
       $('modal-title').textContent='Tambah Penduduk Baru';
-      $('edit-index').value='-1'; $('nik-input').value=''; $('name-input').value='';
+      $('edit-index').value='-1'; $('nik-input').value=''; $('name-input').value=''; $('dusun-input').value='';
       $('photo-base64').value=''; $('upload-photo').value=''; $('capture-back-photo').value='';
       $('photo-preview').src='https://placehold.co/150x180/e2e8f0/94a3b8?text=Foto';
       $('form-modal').classList.remove('hidden');
@@ -589,7 +728,7 @@
       if(!ensureAdmin()) return;
       const r=residents[index]; if(!r) return;
       $('modal-title').textContent='Edit Data Penduduk'; $('edit-index').value=index;
-      $('nik-input').value=r.nik; $('name-input').value=r.name;
+      $('nik-input').value=r.nik; $('name-input').value=r.name; $('dusun-input').value=dusunOf(r);
       $('photo-base64').value=r.photo; $('photo-preview').src=imageSrc(r.photo);
       $('form-modal').classList.remove('hidden');
     }
@@ -720,16 +859,21 @@
       event.preventDefault();if(!ensureAdmin())return;
       const index=Number($('edit-index').value);
       const nik=$('nik-input').value.trim(), name=$('name-input').value.trim(), photo=$('photo-base64').value;
+      const dusun=$('dusun-input').value;
       if(!/^\d{16}$/.test(nik)){showToast('NIK wajib 16 digit angka.',true);return;}
       if(!name || name.length>120){showToast('Nama harus 1 sampai 120 karakter.',true);return;}
+      if(index===-1 && !DUSUN_LIST.includes(dusun)){showToast('Pilih dusun untuk penduduk baru.',true);return;}
       if(!photo){showToast('Foto wajib diisi.',true);return;}
       if(photo.length>550000){showToast('Foto terlalu besar untuk penyimpanan Firestore.',true);return;}
       if(residents.some((r,i)=>r.nik===nik && i!==index)){showToast('NIK sudah terdaftar.',true);return;}
       const btn=$('resident-form').querySelector('button[type="submit"]');btn.disabled=true;btn.textContent='Menyimpan...';
       try{
-        if(index===-1){await addDoc(residentRef,{nik,name,photo,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});showToast('Data baru tersimpan di Firestore.');}
+        if(index===-1){await addDoc(residentRef,{nik,name,photo,dusun,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});showToast('Data baru tersimpan di Firestore.');}
         else {const r=residents[index];if(!r)throw new Error('Data tidak ditemukan, muat ulang halaman.');
-          await updateDoc(doc(db,'residents',r.id),{nik,name,photo,updatedAt:serverTimestamp()});showToast('Data berhasil diperbarui di Firestore.');}
+          const changes={nik,name,photo,updatedAt:serverTimestamp()};
+          // Data lama yang belum mempunyai dusun tidak diubah kecuali admin memilih dusun.
+          if(DUSUN_LIST.includes(dusun) && dusun !== dusunOf(r)) changes.dusun=dusun;
+          await updateDoc(doc(db,'residents',r.id),changes);showToast('Data berhasil diperbarui di Firestore.');}
         closeFormModal();
       }catch(e){console.error(e);showToast('Gagal menyimpan: '+formatError(e),true);}
       finally{btn.disabled=false;btn.textContent='Simpan Data';}
@@ -746,6 +890,7 @@
       $('ikd-card-photo').src=imageSrc(activeCardData.photo);
       $('ikd-card-name').textContent=activeCardData.name;
       $('ikd-card-nik').textContent=activeCardData.nik;
+      $('ikd-card-dusun').textContent=dusunOf(activeCardData) || 'Dusun belum ditentukan';
       $('qr-nik-label').textContent='Hanya data internal';
       $('ikd-card-inner').style.transform='rotateY(0deg)';
       $('card-back-side').classList.add('hidden');
@@ -768,7 +913,7 @@
       if(!ensureAdmin())return;
       if(!residents.length){showToast('Tidak ada data untuk diekspor.',true);return;}
       if(!window.XLSX){showToast('Pustaka Excel gagal dimuat. Periksa internet.',true);return;}
-      const data=residents.map((r,i)=>({'No':i+1,'NIK':r.nik,'Nama Lengkap':r.name,'Foto':'Tersedia di aplikasi (tidak ikut file Excel)'}));
+      const data=residents.map((r,i)=>({'No':i+1,'NIK':r.nik,'Nama Lengkap':r.name,'Dusun':dusunOf(r) || 'Belum ditentukan','Foto':'Tersedia di aplikasi (tidak ikut file Excel)'}));
       const sheet=XLSX.utils.json_to_sheet(data);
       // Pastikan kolom NIK disimpan sebagai teks sehingga nol di depan tidak terpotong.
       Object.entries(sheet).forEach(([cell,val])=>{if(/^B\d+$/.test(cell)&&val?.v!=null){val.t='s';val.v=String(val.v);}});
